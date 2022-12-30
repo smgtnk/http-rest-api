@@ -19,3 +19,7 @@ go build -v ./cmd/apiserver(собрали exe)
 ./apiserver -запустили
 
 12. go get github.com/stretchr/testify
+
+13. go get github.com/lib/pq - postgres
+
+14. make; ./apiserver
