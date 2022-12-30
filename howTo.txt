@@ -1,0 +1,21 @@
+1. mkdir http-rest-api
+2. go mod init github.com/smgtnk/http-rest-api
+3. cmd/apiserver/main.go
+4. makefile
+4. internal/app/apiserver/apiserver.go
+5. configs/apiserver.toml
+6. go get github.com/BurntSushi/toml@latest - парсер toml конфигов
+7......
+8. go build -v ./cmd/apiserver(собрали exe)
+9. ./apiserver -help (вызвали help )
+  -config-path string
+        path to config file (default "configs/apiserver.toml")
+
+./apiserver -config-path config.toml (запуск бинарника с отсутствующим конфигом) 
+10. go get github.com/sirupsen/logrus - логгер
+11. go get -u github.com/gorilla/mux
+
+go build -v ./cmd/apiserver(собрали exe)
+./apiserver -запустили
+
+12. go get github.com/stretchr/testify
