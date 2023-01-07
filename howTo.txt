@@ -23,3 +23,18 @@ go build -v ./cmd/apiserver(собрали exe)
 13. go get github.com/lib/pq - postgres
 
 14. make; ./apiserver
+
+psql -U имя_пользователя
+password
+createdb restapi_dev;
+
+scoop install migrate
+
+go get -u -d github.com/golang-migrate/migrate/cmd/migrate
+
+migrate create -ext sql -dir migrations create_users
+migrate -path migrations -database "postgres://localhost/restapi_dev?sslmode=disable&user=postgres&password=123" up
+
+psql -U postgres -d restapi_dev
+\dt
+\d users
