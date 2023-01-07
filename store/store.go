@@ -50,4 +50,5 @@ func (s *Store) User() *UserRepository {
 	}
 
 	return s.userRepository
+	// store.User().Create()
 }

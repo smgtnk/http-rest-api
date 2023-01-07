@@ -26,7 +26,7 @@ go build -v ./cmd/apiserver(собрали exe)
 
 psql -U имя_пользователя
 password
-createdb restapi_dev;
+create database restapi_dev;
 
 scoop install migrate
 
