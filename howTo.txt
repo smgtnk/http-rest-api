@@ -38,3 +38,8 @@ migrate -path migrations -database "postgres://localhost/restapi_dev?sslmode=dis
 psql -U postgres -d restapi_dev
 \dt
 \d users
+
+go get golang.org/x/crypto
+
+go get github.com/go-ozzo/ozzo-validation
+go get github.com/go-ozzo/ozzo-validation/is
