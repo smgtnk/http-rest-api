@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/gorilla/sessions"
 	"github.com/smgtnk/http-rest-api/internal/app/model"
 	"github.com/smgtnk/http-rest-api/store/teststore"
 	"github.com/stretchr/testify/assert"
@@ -14,7 +15,7 @@ import (
 
 func TestServer_HandleUsersCreate(t *testing.T) {
 
-	s := NewServer(teststore.New())
+	s := NewServer(teststore.New(), sessions.NewCookieStore([]byte("secret")))
 
 	testCases := []struct {
 		name         string
@@ -68,7 +69,7 @@ func TestServer_HandleSessionsCreate(t *testing.T) {
 	store := teststore.New()
 	store.User().Create(u)
 
-	s := NewServer(store)
+	s := NewServer(store, sessions.NewCookieStore([]byte("secret")))
 
 	testCases := []struct {
 		name         string

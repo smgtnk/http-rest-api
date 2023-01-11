@@ -6,27 +6,34 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
 	"github.com/sirupsen/logrus"
 	"github.com/smgtnk/http-rest-api/internal/app/model"
 	"github.com/smgtnk/http-rest-api/store"
 )
 
 type server struct {
-	router *mux.Router
-	logger *logrus.Logger
-	store  store.Store
+	router       *mux.Router
+	logger       *logrus.Logger
+	store        store.Store
+	sessionStore sessions.Store
 }
+
+const (
+	sessionName = "smgtnk_serv"
+)
 
 var (
 	errIncorrectEmailOrPassword error = errors.New("incorrect email or password")
 )
 
-func NewServer(store store.Store) *server {
+func NewServer(store store.Store, sessionStore sessions.Store) *server {
 
 	s := &server{
-		router: mux.NewRouter(),
-		logger: logrus.New(),
-		store:  store,
+		router:       mux.NewRouter(),
+		logger:       logrus.New(),
+		store:        store,
+		sessionStore: sessionStore,
 	}
 
 	s.configureRouter()
@@ -63,6 +70,20 @@ func (s *server) handleSessionCreate() http.HandlerFunc {
 
 		if err != nil || !u.ComparePassword(req.Password) {
 			s.error(w, r, http.StatusUnauthorized, errIncorrectEmailOrPassword)
+			return
+		}
+
+		session, err := s.sessionStore.Get(r, sessionName)
+
+		if err != nil {
+			s.error(w, r, http.StatusInternalServerError, err)
+			return
+		}
+
+		session.Values["user_id"] = u.ID
+
+		if err := session.Save(r, w); err != nil {
+			s.error(w, r, http.StatusInternalServerError, err)
 			return
 		}
 

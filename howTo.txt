@@ -54,3 +54,5 @@ go get golang.org/x/crypto
 
 go get github.com/go-ozzo/ozzo-validation
 go get github.com/go-ozzo/ozzo-validation/is
+
+ go get github.com/gorilla/sessions
