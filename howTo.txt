@@ -56,3 +56,5 @@ go get github.com/go-ozzo/ozzo-validation
 go get github.com/go-ozzo/ozzo-validation/is
 
  go get github.com/gorilla/sessions
+ go get github.com/gorilla/handlers
+ go get github.com/google/uuid

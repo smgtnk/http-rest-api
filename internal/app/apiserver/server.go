@@ -1,10 +1,14 @@
 package apiserver
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
+	"github.com/google/uuid"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
 	"github.com/sirupsen/logrus"
@@ -19,12 +23,17 @@ type server struct {
 	sessionStore sessions.Store
 }
 
+type cntxKey int8
+
 const (
-	sessionName = "smgtnk_serv"
+	sessionName         = "smgtnk_serv"
+	cntxKeyUser cntxKey = iota
+	cntxKeyRequestID
 )
 
 var (
 	errIncorrectEmailOrPassword error = errors.New("incorrect email or password")
+	errNotAuthenticated         error = errors.New("not authenticated")
 )
 
 func NewServer(store store.Store, sessionStore sessions.Store) *server {
@@ -46,8 +55,91 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) configureRouter() {
+
+	s.router.Use(s.setRequestId)
+	s.router.Use(s.logRequest)
+	s.router.Use(handlers.CORS(handlers.AllowedOrigins([]string{"*"})))
 	s.router.HandleFunc("/users", s.handleUsersCreate()).Methods("POST")
 	s.router.HandleFunc("/sessions", s.handleSessionCreate()).Methods("POST")
+
+	private := s.router.PathPrefix("/private").Subrouter()
+	private.Use(s.authenticateUser)
+
+	private.HandleFunc("/whoami", s.handleWhoAmi()).Methods("GET")
+}
+
+func (s *server) logRequest(next http.Handler) http.Handler {
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		logger := s.logger.WithFields(logrus.Fields{
+			"remote_addr": r.RemoteAddr,
+			"request_id":  r.Context().Value(cntxKeyRequestID),
+		})
+
+		logger.Infof("started %s %s", r.Method, r.RequestURI)
+
+		start := time.Now()
+
+		rw := &responseWriter{w, http.StatusOK}
+
+		next.ServeHTTP(rw, r)
+
+		logger.Infof(
+			"completed %d %s in %v",
+			rw.code,
+			http.StatusText(rw.code),
+			time.Now().Sub(start),
+		)
+	})
+}
+
+func (s *server) setRequestId(next http.Handler) http.Handler {
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		id := uuid.New().String()
+		w.Header().Set("X-Request-ID", id)
+
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), cntxKeyRequestID, id)))
+	})
+}
+
+func (s *server) authenticateUser(next http.Handler) http.Handler {
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		session, err := s.sessionStore.Get(r, sessionName)
+
+		if err != nil {
+			s.error(w, r, http.StatusInternalServerError, err)
+			return
+		}
+
+		id, ok := session.Values["user_id"]
+
+		if !ok {
+			s.error(w, r, http.StatusUnauthorized, errNotAuthenticated)
+			return
+		}
+
+		u, err := s.store.User().Find(id.(int))
+
+		if err != nil {
+			s.error(w, r, http.StatusUnauthorized, errNotAuthenticated)
+			return
+		}
+
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), cntxKeyUser, u)))
+
+	})
+}
+
+func (s *server) handleWhoAmi() http.HandlerFunc {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		s.respond(w, r, http.StatusOK, r.Context().Value(cntxKeyUser).(*model.User))
+	}
 }
 
 func (s *server) handleSessionCreate() http.HandlerFunc {
@@ -90,7 +182,6 @@ func (s *server) handleSessionCreate() http.HandlerFunc {
 		s.respond(w, r, http.StatusOK, nil)
 
 	}
-
 }
 
 func (s *server) handleUsersCreate() http.HandlerFunc {
